@@ -1,10 +1,7 @@
 package com.quantitymeasurement;
 
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
-
-import com.quantitymeasurement.Feet;
 
 public class FeetTest {
 
