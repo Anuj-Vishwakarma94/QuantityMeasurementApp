@@ -85,8 +85,7 @@ public class Length {
 		if (targetUnit == null) {
 			throw new IllegalArgumentException("Target unit cannot be null");
 		}
-		double convertedValue = lengthInInches / targetUnit.getConversionFactor();
-		return Math.round(convertedValue * 1000000.0) / 1000000.0;
+		return targetUnit.convertFromBaseUnit(lengthInInches);
 	}
 
 	@Override
