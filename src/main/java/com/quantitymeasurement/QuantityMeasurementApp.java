@@ -17,6 +17,7 @@ public class QuantityMeasurementApp {
 		return result;
 	}
 
+	// Static method to demonstrate conversion using raw values
 	public static Length demonstrateLengthConversion(double value, Length.LengthUnit fromUnit, 
 																   Length.LengthUnit toUnit) { 
 		Length source = new Length(value, fromUnit); 
@@ -25,10 +26,18 @@ public class QuantityMeasurementApp {
 		return converted; 
 	}
 	
+	// Static method to demonstrate conversion using an existing Length object
 	public static Length demonstrateLengthConversion(Length length, Length.LengthUnit toUnit) { 
 		Length converted = length.convertTo(toUnit); 
 		System.out.println(length + " -> " + converted); 
 		return converted; 
+	}
+	
+	// Static method to demonstrate addition of two Length objects
+	public static Length demonstrateLengthAddition(Length length1, Length length2) {
+	    Length sum = length1.add(length2); // use Length.add() from UC6
+	    System.out.println(length1 + " + " + length2 + " = " + sum);
+	    return sum;
 	}
 	
 	// Main method
@@ -45,5 +54,35 @@ public class QuantityMeasurementApp {
 		demonstrateLengthConversion(30.48, Length.LengthUnit.CENTIMETERS, Length.LengthUnit.FEET); 
 		
 		demonstrateLengthConversion(new Length(-1.0, Length.LengthUnit.FEET), Length.LengthUnit.INCHES);
+
+		demonstrateLengthAddition(
+			new Length(1.0, Length.LengthUnit.FEET),
+			new Length(12.0, Length.LengthUnit.INCHES)
+		);
+		
+		demonstrateLengthAddition(
+			new Length(12.0, Length.LengthUnit.INCHES),
+			new Length(1.0, Length.LengthUnit.FEET)
+		);
+		
+		demonstrateLengthAddition(
+			new Length(1.0, Length.LengthUnit.YARDS),
+			new Length(3.0, Length.LengthUnit.FEET)
+		);
+		
+		demonstrateLengthAddition(
+			new Length(2.54, Length.LengthUnit.CENTIMETERS),
+			new Length(1.0, Length.LengthUnit.INCHES)
+		);
+		
+		demonstrateLengthAddition(
+			new Length(5.0, Length.LengthUnit.FEET),
+			new Length(0.0, Length.LengthUnit.INCHES)
+		);
+		
+		demonstrateLengthAddition(
+			new Length(5.0, Length.LengthUnit.FEET),
+			new Length(-2.0, Length.LengthUnit.FEET)
+		);
 	}
 }
