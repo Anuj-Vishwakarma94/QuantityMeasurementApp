@@ -76,7 +76,3 @@
 - Design evolves toward clean, maintainable, and well-tested software.
 
 ---
-
-<div align="center">
-✨ Incrementally developed using Test-Driven Development and continuous refactoring.
-</div>
