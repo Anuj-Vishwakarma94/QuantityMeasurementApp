@@ -1,6 +1,10 @@
-package com.quantitymeasurement;
+package com.quantitymeasurement.model;
 
 import org.junit.jupiter.api.Test;
+
+import com.quantitymeasurement.unit.LengthUnit;
+import com.quantitymeasurement.unit.WeightUnit;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class QuantityEqualityTest {

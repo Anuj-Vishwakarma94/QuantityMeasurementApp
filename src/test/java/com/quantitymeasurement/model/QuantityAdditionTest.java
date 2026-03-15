@@ -1,6 +1,9 @@
-package com.quantitymeasurement;
+package com.quantitymeasurement.model;
 
 import org.junit.jupiter.api.Test;
+
+import com.quantitymeasurement.unit.LengthUnit;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class QuantityAdditionTest {
