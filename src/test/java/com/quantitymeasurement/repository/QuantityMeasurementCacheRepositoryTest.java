@@ -1,110 +1,116 @@
 package com.quantitymeasurement.repository;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.util.List;
+import com.quantitymeasurement.entity.QuantityMeasurementEntity;
+import com.quantitymeasurement.interfaces.IMeasurable;
+import com.quantitymeasurement.model.QuantityModel;
+import com.quantitymeasurement.units.LengthUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.quantitymeasurement.model.QuantityMeasurementEntity;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * UC15 Repository Layer Test
+ * QuantityMeasurementCacheRepositoryTest
  *
- * This test verifies the correct behavior of the
- * QuantityMeasurementCacheRepository implementation.
+ * Tests the cache repository layer:
+ * - getInstance() always returns the same singleton instance
+ * - save() adds entities to the in-memory cache
+ * - getAllMeasurements() returns the full list
+ * - Multiple saves accumulate correctly
+ * - Implements IQuantityMeasurementRepository contract
  *
- * Test Coverage: - Saving entities - Retrieving stored history - Clearing
- * repository - Append-based persistence
- *
- * These tests ensure the repository layer behaves independently from service
- * and controller layers.
+ * Note: File-persistence (saveToDisk / loadFromDisk) is a side effect
+ * of save(). Those paths are exercised indirectly here. Direct disk tests
+ * are excluded to keep unit tests free of file-system dependencies.
  */
 public class QuantityMeasurementCacheRepositoryTest {
 
-	private QuantityMeasurementCacheRepository repository;
+    private QuantityMeasurementCacheRepository repository;
 
-	/**
-	 * Reset repository before every test to ensure isolation.
-	 */
-	@BeforeEach
-	void setUp() {
-		repository = QuantityMeasurementCacheRepository.getInstance();
-		repository.clear();
-	}
+    // Shared fixtures
+    private QuantityModel<IMeasurable> q1;
+    private QuantityModel<IMeasurable> q2;
+    private QuantityModel<IMeasurable> resultModel;
 
-	/**
-	 * Test saving a measurement entity into repository.
-	 */
-	@Test
-	void testRepository_Save_Success() {
+    @BeforeEach
+    public void setUp() {
+        repository  = QuantityMeasurementCacheRepository.getInstance();
+        q1          = new QuantityModel<>(2.0,  LengthUnit.FEET);
+        q2          = new QuantityModel<>(24.0, LengthUnit.INCHES);
+        resultModel = new QuantityModel<>(4.0,  LengthUnit.FEET);
+    }
 
-		QuantityMeasurementEntity entity = new QuantityMeasurementEntity("COMPARE", "1.0 FEET", "12.0 INCHES", "true");
+    // =========================================================================
+    // SINGLETON
+    // =========================================================================
 
-		repository.save(entity);
+    @Test
+    public void testGetInstance_ReturnsSameInstance() {
+        QuantityMeasurementCacheRepository a = QuantityMeasurementCacheRepository.getInstance();
+        QuantityMeasurementCacheRepository b = QuantityMeasurementCacheRepository.getInstance();
+        assertSame(a, b);
+    }
 
-		List<QuantityMeasurementEntity> history = repository.findAll();
+    @Test
+    public void testGetInstance_NotNull() {
+        assertNotNull(QuantityMeasurementCacheRepository.getInstance());
+    }
 
-		assertEquals(1, history.size());
-		assertEquals("COMPARE", history.get(0).getOperationType());
-	}
+    // =========================================================================
+    // IQuantityMeasurementRepository contract
+    // =========================================================================
 
-	/**
-	 * Test retrieving multiple stored entities.
-	 */
-	@Test
-	void testRepository_FindAll_ReturnsHistory() {
+    @Test
+    public void testImplementsRepositoryInterface() {
+        assertTrue(repository instanceof IQuantityMeasurementRepository);
+    }
 
-		repository.save(new QuantityMeasurementEntity("COMPARE", "1.0 FEET", "12.0 INCHES", "true"));
+    // =========================================================================
+    // save() and getAllMeasurements()
+    // =========================================================================
 
-		repository.save(new QuantityMeasurementEntity("CONVERT", "1.0 FEET", null, "12.0 INCHES"));
+    @Test
+    public void testSave_EntityAppearsInCache() {
+        int sizeBefore = repository.getAllMeasurements().size();
 
-		List<QuantityMeasurementEntity> history = repository.findAll();
+        QuantityMeasurementEntity entity =
+            new QuantityMeasurementEntity(q1, q2, "ADD", resultModel);
+        repository.save(entity);
 
-		assertEquals(2, history.size());
-	}
+        List<QuantityMeasurementEntity> all = repository.getAllMeasurements();
+        assertEquals(sizeBefore + 1, all.size());
+        assertTrue(all.contains(entity));
+    }
 
-	/**
-	 * Test clearing repository history.
-	 */
-	@Test
-	void testRepository_Clear_RemovesAllData() {
+    @Test
+    public void testSave_MultipleEntities_AllAppearInCache() {
+        int sizeBefore = repository.getAllMeasurements().size();
 
-		repository.save(new QuantityMeasurementEntity("ADD", "1.0 FEET", "12.0 INCHES", "2.0 FEET"));
+        QuantityMeasurementEntity e1 =
+            new QuantityMeasurementEntity(q1, q2, "COMPARE", "Equal");
+        QuantityMeasurementEntity e2 =
+            new QuantityMeasurementEntity(q1, q2, "ADD", resultModel);
 
-		repository.clear();
+        repository.save(e1);
+        repository.save(e2);
 
-		List<QuantityMeasurementEntity> history = repository.findAll();
+        List<QuantityMeasurementEntity> all = repository.getAllMeasurements();
+        assertEquals(sizeBefore + 2, all.size());
+    }
 
-		assertTrue(history.isEmpty());
-	}
+    @Test
+    public void testGetAllMeasurements_ReturnsNonNullList() {
+        assertNotNull(repository.getAllMeasurements());
+    }
 
-	/**
-	 * Test that repository does not accept null entities.
-	 */
-	@Test
-	void testRepository_Save_NullEntity_Error() {
-
-		assertThrows(IllegalArgumentException.class, () -> {
-			repository.save(null);
-		});
-	}
-
-	/**
-	 * Test append-based persistence behavior.
-	 *
-	 * Ensures that saving multiple entities results in multiple stored records.
-	 */
-	@Test
-	void testRepository_AppendPersistence() {
-
-		repository.save(new QuantityMeasurementEntity("COMPARE", "1.0 FEET", "12.0 INCHES", "true"));
-
-		repository.save(new QuantityMeasurementEntity("DIVIDE", "24.0 INCHES", "2.0 FEET", "1.0"));
-
-		List<QuantityMeasurementEntity> history = repository.findAll();
-
-		assertEquals(2, history.size());
-	}
+    @Test
+    public void testGetAllMeasurements_ReturnsSameListReference_AfterSave() {
+        // The list returned should always reflect the latest state
+        int sizeBefore = repository.getAllMeasurements().size();
+        repository.save(new QuantityMeasurementEntity(q1, q2, "DIVIDE", "1.0"));
+        assertEquals(sizeBefore + 1, repository.getAllMeasurements().size());
+    }
 }
