@@ -1,129 +1,302 @@
 package com.quantitymeasurement.dto;
 
+/**
+ * QuantityDTO – Data Transfer Object (POJO) used for transferring
+ * quantity measurement data between layers of the application.
+ *
+ * This DTO encapsulates the essential information required for
+ * performing quantity measurement operations such as comparison,
+ * conversion, addition, subtraction, and division.
+ *
+ * <p>The DTO stores the following information:</p>
+ * <ul>
+ * <li>Quantity value</li>
+ * <li>Unit of measurement</li>
+ * <li>Measurement type</li>
+ * </ul>
+ *
+ * The DTO is primarily used to transfer data between the
+ * Application Layer, Controller Layer, and Service Layer
+ * without exposing internal domain models.
+ *
+ * <p>Supported measurement categories include:</p>
+ * <ul>
+ * <li>Length</li>
+ * <li>Volume</li>
+ * <li>Weight</li>
+ * <li>Temperature</li>
+ * </ul>
+ *
+ * Each category defines its own unit enumeration which implements
+ * the {@link IMeasurableUnit} interface.
+ *
+ * This design allows a uniform structure for representing
+ * quantity measurements across different unit categories.
+ */
 public class QuantityDTO {
 
-    private final double value;
-    private final IMeasurableUnit unit;
-
-    public QuantityDTO(double value, IMeasurableUnit unit) {
-
-        if (unit == null) {
-            throw new IllegalArgumentException("Unit cannot be null");
-        }
-
-        if (!Double.isFinite(value)) {
-            throw new IllegalArgumentException("Value must be finite");
-        }
-
-        this.value = value;
-        this.unit = unit;
+    /**
+     * Interface representing measurable units used inside the DTO.
+     *
+     * All unit enumerations inside this DTO implement this interface
+     * to provide a common contract for retrieving unit metadata.
+     *
+     * <p>The interface provides methods to retrieve:</p>
+     * <ul>
+     * <li>Unit name</li>
+     * <li>Measurement type</li>
+     * </ul>
+     */
+    public interface IMeasurableUnit {
+        public String getUnitName();
+        public String getMeasurementType();
     }
 
+    /**
+     * Enumeration representing supported length units.
+     */
+    public enum LengthUnit implements IMeasurableUnit {
+        FEET, 
+        INCHES, 
+        YARDS, 
+        CENTIMETERS;
+
+        /**
+         * Returns the name of the unit.
+         *
+         * @return unit name
+         */
+        @Override
+        public String getUnitName() {
+            return this.name();
+        }
+
+        /**
+         * Returns the measurement type for the unit.
+         *
+         * @return measurement type name
+         */
+        @Override
+        public String getMeasurementType() {
+            return this.getClass().getSimpleName();
+        }
+    }
+
+    /**
+     * Enumeration representing supported volume units.
+     */
+    public enum VolumeUnit implements IMeasurableUnit {
+        LITRE, 
+        MILLILITRE, 
+        GALLON;
+
+        /**
+         * Returns the name of the unit.
+         *
+         * @return unit name
+         */
+        @Override
+        public String getUnitName() {
+            return this.name();
+        }
+
+        /**
+         * Returns the measurement type for the unit.
+         *
+         * @return measurement type name
+         */
+        @Override
+        public String getMeasurementType() {
+            return this.getClass().getSimpleName();
+        }
+    }
+
+    /**
+     * Enumeration representing supported weight units.
+     */
+    public enum WeightUnit implements IMeasurableUnit {
+    	KILOGRAM, 
+    	GRAM, 
+    	POUND;
+
+        /**
+         * Returns the name of the unit.
+         *
+         * @return unit name
+         */
+        @Override
+        public String getUnitName() {
+            return this.name();
+        }
+
+        /**
+         * Returns the measurement type for the unit.
+         *
+         * @return measurement type name
+         */
+        @Override
+        public String getMeasurementType() {
+            return this.getClass().getSimpleName();
+        }
+    }
+
+    /**
+     * Enumeration representing supported temperature units.
+     */
+    public enum TemperatureUnit implements IMeasurableUnit {
+        CELSIUS, FAHRENHEIT, KELVIN;
+
+        /**
+         * Returns the name of the unit.
+         *
+         * @return unit name
+         */
+        @Override
+        public String getUnitName() {
+            return this.name();
+        }
+
+        /**
+         * Returns the measurement type for the unit.
+         *
+         * @return measurement type name
+         */
+        @Override
+        public String getMeasurementType() {
+            return this.getClass().getSimpleName();
+        }
+    }
+
+    /**
+     * Numerical value of the quantity.
+     */
+    public double value;
+
+    /**
+     * Unit associated with the quantity value.
+     */
+    public String unit;
+
+    /**
+     * Measurement category of the unit.
+     */
+    public String measurementType;
+
+    /**
+     * Constructor for creating a QuantityDTO using
+     * a unit enumeration.
+     *
+     * @param value numerical quantity value
+     * @param unit measurable unit enumeration
+     */
+    public QuantityDTO(double value, IMeasurableUnit unit) {
+        this.value = value;
+        this.unit = unit.getUnitName();
+        this.measurementType = unit.getMeasurementType();
+    }
+
+    /**
+     * Constructor for creating a QuantityDTO using
+     * raw string values.
+     *
+     * @param value numerical quantity value
+     * @param unit unit name
+     * @param measurementType measurement category
+     */
+    public QuantityDTO(double value, String unit, String measurementType) {
+        this.value = value;
+        this.unit = unit;
+        this.measurementType = measurementType;
+    }
+
+    /**
+     * Returns the quantity value.
+     *
+     * @return quantity value
+     */
     public double getValue() {
         return value;
     }
 
-    public IMeasurableUnit getUnit() {
+    /**
+     * Returns the unit associated with the quantity.
+     *
+     * @return unit name
+     */
+    public String getUnit() {
         return unit;
     }
 
-    public String getUnitName() {
-        return unit.getUnitName();
-    }
-
+    /**
+     * Returns the measurement category of the quantity.
+     *
+     * @return measurement type
+     */
     public String getMeasurementType() {
-        return unit.getMeasurementType();
+        return measurementType;
     }
 
+    /**
+     * Returns a formatted string representation
+     * of the quantity.
+     *
+     * @return formatted quantity string
+     */
     @Override
     public String toString() {
-        return "QuantityDTO(" + value + ", " + unit.getUnitName() + ")";
+        return String.format("%s %s", Double.toString(value).replace("\\.0+$", ""), unit);
     }
 
-    // ---------------------------------------------------------
-    // DTO Layer Unit Interface
-    // ---------------------------------------------------------
+    /**
+     * Main method for quick testing of QuantityDTO.
+     *
+     * @param args command line arguments
+     */
+    public static void main(String[] args) {
 
-    public interface IMeasurableUnit {
+        System.out.println("---- Testing QuantityDTO ----");
 
-        String getUnitName();
+        QuantityDTO length1 =
+                new QuantityDTO(2, LengthUnit.FEET);
 
-        String getMeasurementType();
-    }
+        QuantityDTO length2 =
+                new QuantityDTO(24, LengthUnit.INCHES);
 
-    // ---------------------------------------------------------
-    // LENGTH UNITS
-    // ---------------------------------------------------------
+        System.out.println("Length DTO 1 : " + length1);
+        System.out.println("Length DTO 2 : " + length2);
 
-    public enum LengthUnit implements IMeasurableUnit {
+        QuantityDTO volume1 =
+                new QuantityDTO(3, VolumeUnit.LITRE);
 
-        FEET, INCHES, YARDS, CENTIMETERS;
+        QuantityDTO volume2 =
+                new QuantityDTO(500, VolumeUnit.MILLILITRE);
 
-        @Override
-        public String getUnitName() {
-            return name();
-        }
+        System.out.println("Volume DTO 1 : " + volume1);
+        System.out.println("Volume DTO 2 : " + volume2);
 
-        @Override
-        public String getMeasurementType() {
-            return "Length";
-        }
-    }
+        QuantityDTO weight1 =
+                new QuantityDTO(5, WeightUnit.KILOGRAM);
 
-    // ---------------------------------------------------------
-    // WEIGHT UNITS
-    // ---------------------------------------------------------
+        QuantityDTO weight2 =
+                new QuantityDTO(500, WeightUnit.GRAM);
 
-    public enum WeightUnit implements IMeasurableUnit {
+        System.out.println("Weight DTO 1 : " + weight1);
+        System.out.println("Weight DTO 2 : " + weight2);
 
-        KILOGRAM, GRAM, POUND;
+        QuantityDTO temp1 =
+                new QuantityDTO(25, TemperatureUnit.CELSIUS);
 
-        @Override
-        public String getUnitName() {
-            return name();
-        }
+        QuantityDTO temp2 =
+                new QuantityDTO(77, TemperatureUnit.FAHRENHEIT);
 
-        @Override
-        public String getMeasurementType() {
-            return "Weight";
-        }
-    }
+        System.out.println("Temperature DTO 1 : " + temp1);
+        System.out.println("Temperature DTO 2 : " + temp2);
 
-    // ---------------------------------------------------------
-    // VOLUME UNITS
-    // ---------------------------------------------------------
+        QuantityDTO custom =
+                new QuantityDTO(10, "FEET", "LengthUnit");
 
-    public enum VolumeUnit implements IMeasurableUnit {
+        System.out.println("String Constructor DTO : " + custom);
 
-        LITRE, MILLILITRE, GALLON;
-
-        @Override
-        public String getUnitName() {
-            return name();
-        }
-
-        @Override
-        public String getMeasurementType() {
-            return "Volume";
-        }
-    }
-
-    // ---------------------------------------------------------
-    // TEMPERATURE UNITS
-    // ---------------------------------------------------------
-
-    public enum TemperatureUnit implements IMeasurableUnit {
-
-        CELSIUS, FAHRENHEIT, KELVIN;
-
-        @Override
-        public String getUnitName() {
-            return name();
-        }
-
-        @Override
-        public String getMeasurementType() {
-            return "Temperature";
-        }
+        System.out.println("---- DTO Testing Complete ----");
     }
 }
