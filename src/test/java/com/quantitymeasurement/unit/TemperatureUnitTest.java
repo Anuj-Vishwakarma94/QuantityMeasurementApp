@@ -1,7 +1,6 @@
 package com.quantitymeasurement.unit;
-import com.quantitymeasurement.model.Quantity;
-import com.quantitymeasurement.units.TemperatureUnit;
 
+import com.quantitymeasurement.entity.Quantity;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -171,7 +170,7 @@ public class TemperatureUnitTest {
     @Test
     public void testImplementsIMeasurable() {
         assertTrue(
-            com.quantitymeasurement.interfaces.IMeasurable.class
+            com.quantitymeasurement.unit.IMeasurable.class
                 .isAssignableFrom(TemperatureUnit.class)
         );
     }

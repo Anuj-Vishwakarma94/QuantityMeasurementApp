@@ -1,7 +1,6 @@
 package com.quantitymeasurement.unit;
-import com.quantitymeasurement.interfaces.SupportsArithmetic;
-import com.quantitymeasurement.units.LengthUnit;
 
+import com.quantitymeasurement.unit.SupportsArithmetic;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

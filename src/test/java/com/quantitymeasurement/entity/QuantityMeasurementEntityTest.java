@@ -1,8 +1,9 @@
 package com.quantitymeasurement.entity;
-import com.quantitymeasurement.interfaces.IMeasurable;
-import com.quantitymeasurement.model.QuantityModel;
-import com.quantitymeasurement.units.LengthUnit;
-import com.quantitymeasurement.units.WeightUnit;
+
+import com.quantitymeasurement.unit.IMeasurable;
+import com.quantitymeasurement.entity.QuantityModel;
+import com.quantitymeasurement.unit.LengthUnit;
+import com.quantitymeasurement.unit.WeightUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
