@@ -1,9 +1,6 @@
-package com.quantitymeasurement.units;
+package com.quantitymeasurement.unit;
 
 import java.util.function.Function;
-
-import com.quantitymeasurement.interfaces.IMeasurable;
-import com.quantitymeasurement.interfaces.SupportsArithmetic;
 
 /**
  * TemperatureUnit – Enumeration representing supported temperature units

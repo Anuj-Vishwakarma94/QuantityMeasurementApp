@@ -1,7 +1,4 @@
-package com.quantitymeasurement.units;
-
-import com.quantitymeasurement.interfaces.IMeasurable;
-import com.quantitymeasurement.interfaces.SupportsArithmetic;
+package com.quantitymeasurement.unit;
 
 /**
  * WeightUnit – Enumeration representing supported weight measurement units
