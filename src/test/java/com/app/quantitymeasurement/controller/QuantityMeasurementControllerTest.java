@@ -1,17 +1,30 @@
 package com.app.quantitymeasurement.controller;
 
 import com.app.quantitymeasurement.config.SecurityConfig;
-import com.app.quantitymeasurement.model.QuantityDTO;
-import com.app.quantitymeasurement.model.QuantityInputDTO;
-import com.app.quantitymeasurement.model.QuantityMeasurementDTO;
+import com.app.quantitymeasurement.dto.response.QuantityDTO;
+import com.app.quantitymeasurement.dto.request.QuantityInputDTO;
+import com.app.quantitymeasurement.dto.request.QuantityMeasurementDTO;
 import com.app.quantitymeasurement.service.IQuantityMeasurementService;
+import com.app.quantitymeasurement.repository.UserRepository;
+import com.app.quantitymeasurement.security.oauth2.CustomOAuth2UserService;
+import com.app.quantitymeasurement.security.CustomUserDetailsService;
+import com.app.quantitymeasurement.security.jwt.JwtAuthenticationEntryPoint;
+import com.app.quantitymeasurement.security.jwt.JwtAuthenticationFilter;
+import com.app.quantitymeasurement.security.jwt.JwtAccessDeniedHandler;
+import com.app.quantitymeasurement.security.jwt.JwtTokenProvider;
+import com.app.quantitymeasurement.security.oauth2.OAuth2AuthenticationFailureHandler;
+import com.app.quantitymeasurement.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -29,7 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * backward compatibility, validation, GET endpoints, Mockito.verify.
  */
 @WebMvcTest(QuantityMeasurementController.class)
-@org.springframework.context.annotation.Import(SecurityConfig.class)
+@Import(SecurityConfig.class)
+@AutoConfigureMockMvc(addFilters = false)
 public class QuantityMeasurementControllerTest {
 
     private static final double EPSILON = 1e-6;
@@ -37,6 +51,18 @@ public class QuantityMeasurementControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @MockBean  private IQuantityMeasurementService quantityMeasurementService;
+
+    // UC18 security beans required by SecurityConfig in @WebMvcTest context
+    @MockBean  private JwtAuthenticationFilter    jwtAuthenticationFilter;
+    @MockBean  private JwtTokenProvider           jwtTokenProvider;
+    @MockBean  private CustomUserDetailsService   customUserDetailsService;
+    @MockBean  private CustomOAuth2UserService    customOAuth2UserService;
+    @MockBean  private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    @MockBean  private JwtAccessDeniedHandler     jwtAccessDeniedHandler;
+    @MockBean  private OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
+    @MockBean  private OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
+    @MockBean  private UserRepository             userRepository;
+    @MockBean  private PasswordEncoder            passwordEncoder;
 
     private QuantityDTO twoFeet, twentyFourInches, zeroYards;
     private QuantityMeasurementDTO equalResult, notEqualResult;
@@ -66,6 +92,7 @@ public class QuantityMeasurementControllerTest {
     // =========================================================================
 
     /** testLayerSeparation_ControllerIndependence_StubService (spec 22) */
+    @WithMockUser(roles = "USER")
     @Test public void testLayerSeparation_ControllerIndependence_StubService() throws Exception {
         when(quantityMeasurementService.compare(any(), any())).thenReturn(equalResult);
         doPost("compare", new QuantityInputDTO(twoFeet, twentyFourInches, null))
@@ -74,6 +101,7 @@ public class QuantityMeasurementControllerTest {
     }
 
     /** testController_NullBody_Returns400 — null body causes 400, controller has no null guard */
+    @WithMockUser(roles = "USER")
     @Test public void testController_NullBody_Returns400() throws Exception {
         mockMvc.perform(post("/api/v1/quantities/compare").contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isBadRequest());
@@ -84,6 +112,7 @@ public class QuantityMeasurementControllerTest {
     // =========================================================================
 
     /** testPerformComparison_Equal_ReturnsTrue (spec 15) */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformComparison_Equal_ReturnsTrue() throws Exception {
         when(quantityMeasurementService.compare(any(), any())).thenReturn(equalResult);
         doPost("compare", new QuantityInputDTO(twoFeet, twentyFourInches, null))
@@ -91,6 +120,7 @@ public class QuantityMeasurementControllerTest {
     }
 
     /** testPerformComparison_NotEqual_ReturnsFalse */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformComparison_NotEqual_ReturnsFalse() throws Exception {
         when(quantityMeasurementService.compare(any(), any())).thenReturn(notEqualResult);
         doPost("compare", new QuantityInputDTO(new QuantityDTO(1.0, QuantityDTO.LengthUnit.FEET), twentyFourInches, null))
@@ -102,6 +132,7 @@ public class QuantityMeasurementControllerTest {
     // =========================================================================
 
     /** testPerformConversion_InchesToYards_CorrectResult (spec 16) */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformConversion_InchesToYards_CorrectResult() throws Exception {
         when(quantityMeasurementService.convert(any(), any())).thenReturn(
             QuantityMeasurementDTO.builder().operation("convert").resultValue(0.666667).resultUnit("YARDS").error(false).build());
@@ -110,6 +141,7 @@ public class QuantityMeasurementControllerTest {
     }
 
     /** testPerformConversion_FeetToInches_CorrectResult */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformConversion_FeetToInches_CorrectResult() throws Exception {
         when(quantityMeasurementService.convert(any(), any())).thenReturn(
             QuantityMeasurementDTO.builder().operation("convert").resultValue(24.0).resultUnit("INCHES").error(false).build());
@@ -118,6 +150,7 @@ public class QuantityMeasurementControllerTest {
     }
 
     /** testPerformConversion_Temperature_CelsiusToFahrenheit */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformConversion_Temperature_CelsiusToFahrenheit() throws Exception {
         when(quantityMeasurementService.convert(any(), any())).thenReturn(
             QuantityMeasurementDTO.builder().operation("convert").resultValue(212.0).resultUnit("FAHRENHEIT").error(false).build());
@@ -132,6 +165,7 @@ public class QuantityMeasurementControllerTest {
     // =========================================================================
 
     /** testPerformAddition_TwoOperands_DefaultUnit (spec 17) */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformAddition_TwoOperands_DefaultUnit() throws Exception {
         when(quantityMeasurementService.add(any(), any())).thenReturn(buildResult("add", 4.0, "FEET", "LengthUnit"));
         doPost("add", new QuantityInputDTO(twoFeet, twentyFourInches, null))
@@ -139,6 +173,7 @@ public class QuantityMeasurementControllerTest {
     }
 
     /** testPerformAddition_ThreeOperands_ExplicitTargetUnit */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformAddition_ThreeOperands_ExplicitTargetUnit() throws Exception {
         when(quantityMeasurementService.add(any(), any(), any())).thenReturn(buildResult("add", 1.333333, "YARDS", "LengthUnit"));
         doPost("add", new QuantityInputDTO(twoFeet, twentyFourInches, zeroYards))
@@ -146,6 +181,7 @@ public class QuantityMeasurementControllerTest {
     }
 
     /** testPerformAddition_Weight_KilogramPlusGram */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformAddition_Weight_KilogramPlusGram() throws Exception {
         when(quantityMeasurementService.add(any(), any())).thenReturn(buildResult("add", 2.0, "KILOGRAM", "WeightUnit"));
         doPost("add", new QuantityInputDTO(new QuantityDTO(1.0, QuantityDTO.WeightUnit.KILOGRAM),
@@ -154,6 +190,7 @@ public class QuantityMeasurementControllerTest {
     }
 
     /** testPerformAddition_Volume_LitrePlusMillilitre */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformAddition_Volume_LitrePlusMillilitre() throws Exception {
         when(quantityMeasurementService.add(any(), any())).thenReturn(buildResult("add", 2.0, "LITRE", "VolumeUnit"));
         doPost("add", new QuantityInputDTO(new QuantityDTO(1.0, QuantityDTO.VolumeUnit.LITRE),
@@ -166,6 +203,7 @@ public class QuantityMeasurementControllerTest {
     // =========================================================================
 
     /** testPerformSubtraction_TwoOperands_DefaultUnit */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformSubtraction_TwoOperands_DefaultUnit() throws Exception {
         when(quantityMeasurementService.subtract(any(), any())).thenReturn(buildResult("subtract", 0.0, "FEET", "LengthUnit"));
         doPost("subtract", new QuantityInputDTO(twoFeet, twentyFourInches, null))
@@ -173,6 +211,7 @@ public class QuantityMeasurementControllerTest {
     }
 
     /** testPerformSubtraction_ThreeOperands_ExplicitTargetUnit */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformSubtraction_ThreeOperands_ExplicitTargetUnit() throws Exception {
         when(quantityMeasurementService.subtract(any(), any(), any())).thenReturn(buildResult("subtract", 9.5, "FEET", "LengthUnit"));
         doPost("subtract", new QuantityInputDTO(new QuantityDTO(10.0, QuantityDTO.LengthUnit.FEET),
@@ -185,6 +224,7 @@ public class QuantityMeasurementControllerTest {
     // =========================================================================
 
     /** testPerformDivision_EqualQuantities_ReturnsOne */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformDivision_EqualQuantities_ReturnsOne() throws Exception {
         when(quantityMeasurementService.divide(any(), any())).thenReturn(
             QuantityMeasurementDTO.builder().operation("divide").resultValue(1.0).error(false).build());
@@ -193,6 +233,7 @@ public class QuantityMeasurementControllerTest {
     }
 
     /** testPerformDivision_FourFeetOverTwoFeet_ReturnsTwo */
+    @WithMockUser(roles = "USER")
     @Test public void testPerformDivision_FourFeetOverTwoFeet_ReturnsTwo() throws Exception {
         when(quantityMeasurementService.divide(any(), any())).thenReturn(
             QuantityMeasurementDTO.builder().operation("divide").resultValue(2.0).error(false).build());
@@ -205,6 +246,7 @@ public class QuantityMeasurementControllerTest {
     // =========================================================================
 
     /** testAllOperations_RouteCorrectly */
+    @WithMockUser(roles = "USER")
     @Test public void testAllOperations_RouteCorrectly() throws Exception {
         when(quantityMeasurementService.compare(any(), any())).thenReturn(equalResult);
         when(quantityMeasurementService.convert(any(), any())).thenReturn(buildResult("convert", 0.666667, "YARDS", "LengthUnit"));
@@ -227,6 +269,7 @@ public class QuantityMeasurementControllerTest {
     // =========================================================================
 
     /** testDataFlow_InputPassedThrough_OutputReturnedUnmodified */
+    @WithMockUser(roles = "USER")
     @Test public void testDataFlow_InputPassedThrough_OutputReturnedUnmodified() throws Exception {
         QuantityMeasurementDTO expected = QuantityMeasurementDTO.builder()
             .operation("add").resultValue(2.0).resultUnit("FEET").resultMeasurementType("LengthUnit").error(false).build();
@@ -242,32 +285,38 @@ public class QuantityMeasurementControllerTest {
     // BACKWARD COMPATIBILITY (spec 25)
     // =========================================================================
 
+    @WithMockUser(roles = "USER")
     @Test public void testBackwardCompatibility_UC1_CompareEqualLengths() throws Exception {
         when(quantityMeasurementService.compare(any(), any())).thenReturn(equalResult);
         doPost("compare", new QuantityInputDTO(twoFeet, twentyFourInches, null)).andExpect(status().isOk()).andExpect(jsonPath("$.resultString").value("true"));
     }
 
+    @WithMockUser(roles = "USER")
     @Test public void testBackwardCompatibility_UC5_ConvertInchesToYards() throws Exception {
         when(quantityMeasurementService.convert(any(), any())).thenReturn(buildResult("convert", 0.666667, "YARDS", "LengthUnit"));
         doPost("convert", new QuantityInputDTO(twentyFourInches, zeroYards, null)).andExpect(status().isOk()).andExpect(jsonPath("$.resultUnit").value("YARDS"));
     }
 
+    @WithMockUser(roles = "USER")
     @Test public void testBackwardCompatibility_UC6_AddFeetAndInches() throws Exception {
         when(quantityMeasurementService.add(any(), any())).thenReturn(buildResult("add", 4.0, "FEET", "LengthUnit"));
         doPost("add", new QuantityInputDTO(twoFeet, twentyFourInches, null)).andExpect(status().isOk()).andExpect(jsonPath("$.resultValue").value(4.0));
     }
 
+    @WithMockUser(roles = "USER")
     @Test public void testBackwardCompatibility_UC7_AddWithTargetUnit() throws Exception {
         when(quantityMeasurementService.add(any(), any(), any())).thenReturn(buildResult("add", 1.333333, "YARDS", "LengthUnit"));
         doPost("add", new QuantityInputDTO(twoFeet, twentyFourInches, zeroYards)).andExpect(status().isOk()).andExpect(jsonPath("$.resultUnit").value("YARDS"));
     }
 
+    @WithMockUser(roles = "USER")
     @Test public void testBackwardCompatibility_SubtractFeetMinusInches() throws Exception {
         when(quantityMeasurementService.subtract(any(), any())).thenReturn(buildResult("subtract", 9.5, "FEET", "LengthUnit"));
         doPost("subtract", new QuantityInputDTO(new QuantityDTO(10.0, QuantityDTO.LengthUnit.FEET), new QuantityDTO(6.0, QuantityDTO.LengthUnit.INCHES), null))
             .andExpect(status().isOk()).andExpect(jsonPath("$.resultValue").value(9.5));
     }
 
+    @WithMockUser(roles = "USER")
     @Test public void testBackwardCompatibility_DivideEqualQuantities() throws Exception {
         when(quantityMeasurementService.divide(any(), any())).thenReturn(QuantityMeasurementDTO.builder().operation("divide").resultValue(1.0).error(false).build());
         doPost("divide", new QuantityInputDTO(twoFeet, twentyFourInches, null)).andExpect(status().isOk()).andExpect(jsonPath("$.resultValue").value(1.0));
@@ -277,11 +326,13 @@ public class QuantityMeasurementControllerTest {
     // VALIDATION / GET endpoints
     // =========================================================================
 
+    @WithMockUser(roles = "USER")
     @Test public void testCompareQuantities_InvalidInput_Returns400() throws Exception {
         mockMvc.perform(post("/api/v1/quantities/compare").contentType(MediaType.APPLICATION_JSON)
             .content("{\"thisQuantityDTO\":null,\"thatQuantityDTO\":null}")).andExpect(status().isBadRequest());
     }
 
+    @WithMockUser(roles = "USER")
     @Test public void testCompareQuantities_InvalidUnitName_Returns400() throws Exception {
         String bad = "{\"thisQuantityDTO\":{\"value\":1.0,\"unit\":\"FOOT\",\"measurementType\":\"LengthUnit\"},"
             + "\"thatQuantityDTO\":{\"value\":12.0,\"unit\":\"INCHES\",\"measurementType\":\"LengthUnit\"}}";
@@ -289,22 +340,26 @@ public class QuantityMeasurementControllerTest {
             .andExpect(status().isBadRequest());
     }
 
+    @WithMockUser(roles = "USER")
     @Test public void testGetOperationHistory_ReturnsListOfDTOs() throws Exception {
         when(quantityMeasurementService.getHistoryByOperation("compare")).thenReturn(List.of(equalResult));
         mockMvc.perform(get("/api/v1/quantities/history/operation/compare")).andExpect(status().isOk()).andExpect(jsonPath("$[0].operation").value("compare"));
     }
 
+    @WithMockUser(roles = "USER")
     @Test public void testGetMeasurementHistory_ByType_ReturnsList() throws Exception {
         when(quantityMeasurementService.getHistoryByMeasurementType("LengthUnit")).thenReturn(List.of(equalResult));
         mockMvc.perform(get("/api/v1/quantities/history/type/LengthUnit")).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
     }
 
+    @WithMockUser(roles = "ADMIN")
     @Test public void testGetErrorHistory_ReturnsErrorRecords() throws Exception {
         when(quantityMeasurementService.getErrorHistory()).thenReturn(
             List.of(QuantityMeasurementDTO.builder().operation("add").error(true).errorMessage("Incompatible types").build()));
         mockMvc.perform(get("/api/v1/quantities/history/errored")).andExpect(status().isOk()).andExpect(jsonPath("$[0].error").value(true));
     }
 
+    @WithMockUser(roles = "USER")
     @Test public void testGetOperationCount_ReturnsCount() throws Exception {
         when(quantityMeasurementService.getOperationCount("COMPARE")).thenReturn(5L);
         mockMvc.perform(get("/api/v1/quantities/count/COMPARE")).andExpect(status().isOk()).andExpect(content().string("5"));

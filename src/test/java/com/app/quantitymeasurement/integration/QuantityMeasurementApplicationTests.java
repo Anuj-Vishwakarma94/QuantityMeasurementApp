@@ -1,10 +1,18 @@
 package com.app.quantitymeasurement.integration;
 
-import com.app.quantitymeasurement.model.QuantityDTO;
-import com.app.quantitymeasurement.model.QuantityInputDTO;
-import com.app.quantitymeasurement.model.QuantityMeasurementDTO;
-import com.app.quantitymeasurement.model.QuantityMeasurementEntity;
+import com.app.quantitymeasurement.dto.request.AuthRequest;
+import com.app.quantitymeasurement.dto.response.AuthResponse;
+import com.app.quantitymeasurement.dto.request.RegisterRequest;
+import com.app.quantitymeasurement.dto.response.QuantityDTO;
+import com.app.quantitymeasurement.dto.request.QuantityInputDTO;
+import com.app.quantitymeasurement.dto.request.QuantityMeasurementDTO;
+import com.app.quantitymeasurement.entity.QuantityMeasurementEntity;
+import com.app.quantitymeasurement.entity.User;
+import com.app.quantitymeasurement.enums.AuthProvider;
+import com.app.quantitymeasurement.enums.Role;
 import com.app.quantitymeasurement.repository.QuantityMeasurementRepository;
+import com.app.quantitymeasurement.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -47,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-public class QuantityMeasurementIntegrationTest {
+public class QuantityMeasurementApplicationTests {
 
     /**
      * Injected local server port — dynamically assigned during tests to avoid port conflicts.
@@ -68,10 +76,20 @@ public class QuantityMeasurementIntegrationTest {
     @Autowired
     private QuantityMeasurementRepository repository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     /**
      * Base URL for all API requests — constructed using the random port.
      */
     private String baseUrl;
+
+    private String authUrl;
+    private String testToken;
+    private String adminToken;
 
     /**
      * Shared test DTOs for quantity operations.
@@ -85,8 +103,12 @@ public class QuantityMeasurementIntegrationTest {
      */
     @BeforeEach
     public void setUp() {
-        baseUrl = "http://localhost:" + port + "/api/v1/quantities";
+        baseUrl  = "http://localhost:" + port + "/api/v1/quantities";
+        authUrl  = "http://localhost:" + port + "/api/v1/auth";
         repository.deleteAll();
+        userRepository.deleteAll();
+        testToken = registerAndGetToken("test@example.com", "password123");
+        adminToken = registerAdminAndGetToken("admin@example.com", "password123");
 
         feetDTO   = new QuantityDTO(1.0, QuantityDTO.LengthUnit.FEET);
         inchesDTO = new QuantityDTO(12.0, QuantityDTO.LengthUnit.INCHES);
@@ -123,8 +145,13 @@ public class QuantityMeasurementIntegrationTest {
     public void testRestEndpointCompareQuantities() {
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, null);
 
-        ResponseEntity<QuantityMeasurementDTO> response = restTemplate.postForEntity(
-            baseUrl + "/compare", input, QuantityMeasurementDTO.class);
+        ResponseEntity<QuantityMeasurementDTO> response = 
+        	restTemplate.exchange(
+                baseUrl + "/compare", 
+                HttpMethod.POST,
+                withToken(input, testToken), 
+                QuantityMeasurementDTO.class
+            );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -142,8 +169,13 @@ public class QuantityMeasurementIntegrationTest {
         QuantityDTO twoFeet = new QuantityDTO(2.0, QuantityDTO.LengthUnit.FEET);
         QuantityInputDTO input = new QuantityInputDTO(twoFeet, inchesDTO, null);
 
-        ResponseEntity<QuantityMeasurementDTO> response = restTemplate.postForEntity(
-            baseUrl + "/compare", input, QuantityMeasurementDTO.class);
+        ResponseEntity<QuantityMeasurementDTO> response = 
+        	restTemplate.exchange(
+                baseUrl + "/compare", 
+                HttpMethod.POST,
+                withToken(input, testToken), 
+                QuantityMeasurementDTO.class
+            );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("false", response.getBody().getResultString());
@@ -162,8 +194,13 @@ public class QuantityMeasurementIntegrationTest {
         QuantityDTO targetDTO = new QuantityDTO(0.0, QuantityDTO.LengthUnit.INCHES);
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, targetDTO, null);
 
-        ResponseEntity<QuantityMeasurementDTO> response = restTemplate.postForEntity(
-            baseUrl + "/convert", input, QuantityMeasurementDTO.class);
+        ResponseEntity<QuantityMeasurementDTO> response = 
+        		restTemplate.exchange(
+        			baseUrl + "/convert", 
+        			HttpMethod.POST,
+        		    withToken(input, testToken),
+        			QuantityMeasurementDTO.class
+        		);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -184,8 +221,13 @@ public class QuantityMeasurementIntegrationTest {
     public void testRestEndpointAddQuantities() {
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, null);
 
-        ResponseEntity<QuantityMeasurementDTO> response = restTemplate.postForEntity(
-            baseUrl + "/add", input, QuantityMeasurementDTO.class);
+        ResponseEntity<QuantityMeasurementDTO> response = 
+        	restTemplate.exchange(
+                baseUrl + "/add", 
+                HttpMethod.POST,
+                withToken(input, testToken),
+                QuantityMeasurementDTO.class
+            );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -204,8 +246,13 @@ public class QuantityMeasurementIntegrationTest {
         QuantityDTO yardsTarget = new QuantityDTO(0.0, QuantityDTO.LengthUnit.YARDS);
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, yardsTarget);
 
-        ResponseEntity<QuantityMeasurementDTO> response = restTemplate.postForEntity(
-            baseUrl + "/add", input, QuantityMeasurementDTO.class);
+        ResponseEntity<QuantityMeasurementDTO> response = 
+        	restTemplate.exchange(
+                baseUrl + "/add", 
+                HttpMethod.POST,
+                withToken(input, testToken), 
+                QuantityMeasurementDTO.class
+            );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("YARDS", response.getBody().getResultUnit());
@@ -224,8 +271,13 @@ public class QuantityMeasurementIntegrationTest {
     public void testRestEndpointSubtractQuantities() {
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, null);
 
-        ResponseEntity<QuantityMeasurementDTO> response = restTemplate.postForEntity(
-            baseUrl + "/subtract", input, QuantityMeasurementDTO.class);
+        ResponseEntity<QuantityMeasurementDTO> response = 
+        	restTemplate.exchange(
+                baseUrl + "/subtract", 
+                HttpMethod.POST,
+                withToken(input, testToken), 
+                QuantityMeasurementDTO.class
+            );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("subtract", response.getBody().getOperation());
@@ -244,8 +296,13 @@ public class QuantityMeasurementIntegrationTest {
     public void testRestEndpointDivideQuantities() {
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, feetDTO, null);
 
-        ResponseEntity<QuantityMeasurementDTO> response = restTemplate.postForEntity(
-            baseUrl + "/divide", input, QuantityMeasurementDTO.class);
+        ResponseEntity<QuantityMeasurementDTO> response = 
+        	restTemplate.exchange(
+    			baseUrl + "/divide", 
+    			HttpMethod.POST,
+    		    withToken(input, testToken),
+    			QuantityMeasurementDTO.class
+    		);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("divide", response.getBody().getOperation());
@@ -271,8 +328,13 @@ public class QuantityMeasurementIntegrationTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(badJson, headers);
 
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-            baseUrl + "/compare", entity, Map.class);
+        ResponseEntity<Map> response = 
+        	restTemplate.exchange(
+                baseUrl + "/compare", 
+                HttpMethod.POST,
+                withToken(entity, testToken),
+                Map.class
+            );
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -289,8 +351,13 @@ public class QuantityMeasurementIntegrationTest {
         QuantityDTO kilogramDTO = new QuantityDTO(1.0, QuantityDTO.WeightUnit.KILOGRAM);
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, kilogramDTO, null);
 
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-            baseUrl + "/add", input, Map.class);
+        ResponseEntity<Map> response = 
+        	restTemplate.exchange(
+                baseUrl + "/add", 
+                HttpMethod.POST,
+                withToken(input, testToken), 
+                Map.class
+            );
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -309,13 +376,10 @@ public class QuantityMeasurementIntegrationTest {
     public void testGetOperationHistory_AfterCompare_ReturnsRecord() {
         // First perform a compare
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, null);
-        restTemplate.postForEntity(baseUrl + "/compare", input, QuantityMeasurementDTO.class);
+        restTemplate.exchange(baseUrl + "/compare", HttpMethod.POST, withToken(input, testToken), QuantityMeasurementDTO.class);
 
         // Then retrieve history
-        ResponseEntity<List<QuantityMeasurementDTO>> response = restTemplate.exchange(
-            baseUrl + "/history/operation/compare",
-            HttpMethod.GET,
-            null,
+        ResponseEntity<List<QuantityMeasurementDTO>> response = restTemplate.exchange(baseUrl + "/history/operation/compare", HttpMethod.GET, withToken(testToken),
             new ParameterizedTypeReference<List<QuantityMeasurementDTO>>() {}
         );
 
@@ -336,13 +400,10 @@ public class QuantityMeasurementIntegrationTest {
     public void testGetHistoryByType_AfterOperations_ReturnsMatchingRecords() {
         // Perform two operations
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, null);
-        restTemplate.postForEntity(baseUrl + "/compare", input, QuantityMeasurementDTO.class);
-        restTemplate.postForEntity(baseUrl + "/add", input, QuantityMeasurementDTO.class);
+        restTemplate.exchange(baseUrl + "/compare", HttpMethod.POST, withToken(input, testToken), QuantityMeasurementDTO.class);
+        restTemplate.exchange(baseUrl + "/add", HttpMethod.POST, withToken(input, testToken), QuantityMeasurementDTO.class);
 
-        ResponseEntity<List<QuantityMeasurementDTO>> response = restTemplate.exchange(
-            baseUrl + "/history/type/LengthUnit",
-            HttpMethod.GET,
-            null,
+        ResponseEntity<List<QuantityMeasurementDTO>> response = restTemplate.exchange(baseUrl + "/history/type/LengthUnit", HttpMethod.GET, withToken(testToken),
             new ParameterizedTypeReference<List<QuantityMeasurementDTO>>() {}
         );
 
@@ -363,16 +424,23 @@ public class QuantityMeasurementIntegrationTest {
         // Trigger an error by adding incompatible types
         QuantityDTO kilogramDTO = new QuantityDTO(1.0, QuantityDTO.WeightUnit.KILOGRAM);
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, kilogramDTO, null);
-        restTemplate.postForEntity(baseUrl + "/add", input, Map.class);
+        restTemplate.exchange(
+            baseUrl + "/add",
+            HttpMethod.POST,
+            withToken(input, adminToken),
+            Map.class
+        );
 
-        ResponseEntity<List<QuantityMeasurementDTO>> response = restTemplate.exchange(
-            baseUrl + "/history/errored",
-            HttpMethod.GET,
-            null,
-            new ParameterizedTypeReference<List<QuantityMeasurementDTO>>() {}
+        ResponseEntity<List<QuantityMeasurementDTO>> response = 
+        	restTemplate.exchange(
+        		baseUrl + "/history/errored", 
+        		HttpMethod.GET, 
+        		withToken(adminToken),
+        		new ParameterizedTypeReference<List<QuantityMeasurementDTO>>() {}
         );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
         assertFalse(response.getBody().isEmpty());
         assertTrue(response.getBody().get(0).isError());
     }
@@ -389,11 +457,26 @@ public class QuantityMeasurementIntegrationTest {
     public void testGetOperationCount_AfterCompare_ReturnsCorrectCount() {
         // Perform two compare operations
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, null);
-        restTemplate.postForEntity(baseUrl + "/compare", input, QuantityMeasurementDTO.class);
-        restTemplate.postForEntity(baseUrl + "/compare", input, QuantityMeasurementDTO.class);
+        restTemplate.exchange(
+        	baseUrl + "/compare", 
+        	HttpMethod.POST, 
+        	withToken(input, testToken), 
+        	QuantityMeasurementDTO.class
+        );
+        restTemplate.exchange(
+        	baseUrl + "/compare", 
+        	HttpMethod.POST, 
+        	withToken(input, testToken), 
+        	QuantityMeasurementDTO.class
+        );
 
-        ResponseEntity<Long> response = restTemplate.getForEntity(
-            baseUrl + "/count/compare", Long.class);
+        ResponseEntity<Long> response = 
+        	restTemplate.exchange(
+        		baseUrl + "/count/compare",
+        		HttpMethod.GET,
+        		withToken(input, testToken),
+        		Long.class
+            );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(2L, response.getBody());
@@ -411,7 +494,7 @@ public class QuantityMeasurementIntegrationTest {
     public void testJPARepositoryFindByOperation_ReturnsCorrectEntities() {
         // Perform an add operation via REST (which saves to DB)
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, null);
-        restTemplate.postForEntity(baseUrl + "/add", input, QuantityMeasurementDTO.class);
+        restTemplate.exchange(baseUrl + "/add", HttpMethod.POST, withToken(input, testToken), QuantityMeasurementDTO.class);
 
         // Query repository directly
         List<QuantityMeasurementEntity> entities = repository.findByOperation("add");
@@ -427,12 +510,12 @@ public class QuantityMeasurementIntegrationTest {
     public void testJPARepositoryFindByIsErrorTrue_ReturnsErrorEntities() {
         // First a successful operation
         QuantityInputDTO goodInput = new QuantityInputDTO(feetDTO, inchesDTO, null);
-        restTemplate.postForEntity(baseUrl + "/compare", goodInput, QuantityMeasurementDTO.class);
+        restTemplate.exchange(baseUrl + "/compare", HttpMethod.POST, withToken(goodInput, testToken), QuantityMeasurementDTO.class);
 
         // Then a failing operation
         QuantityDTO kilogramDTO = new QuantityDTO(1.0, QuantityDTO.WeightUnit.KILOGRAM);
         QuantityInputDTO badInput = new QuantityInputDTO(feetDTO, kilogramDTO, null);
-        restTemplate.postForEntity(baseUrl + "/add", badInput, Map.class);
+        restTemplate.exchange(baseUrl + "/add", HttpMethod.POST, withToken(badInput, testToken), Map.class);
 
         List<QuantityMeasurementEntity> errors = repository.findByErrorTrue();
         assertFalse(errors.isEmpty());
@@ -447,8 +530,8 @@ public class QuantityMeasurementIntegrationTest {
     public void testJPARepositoryCountByOperationAndIsErrorFalse() {
         // Two compare operations
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, null);
-        restTemplate.postForEntity(baseUrl + "/compare", input, QuantityMeasurementDTO.class);
-        restTemplate.postForEntity(baseUrl + "/compare", input, QuantityMeasurementDTO.class);
+        restTemplate.exchange(baseUrl + "/compare", HttpMethod.POST, withToken(input, testToken), QuantityMeasurementDTO.class);
+        restTemplate.exchange(baseUrl + "/compare", HttpMethod.POST, withToken(input, testToken), QuantityMeasurementDTO.class);
 
         long count = repository.countByOperationAndErrorFalse("compare");
         assertEquals(2L, count);
@@ -535,8 +618,13 @@ public class QuantityMeasurementIntegrationTest {
     public void testContentNegotiation_ResponseIsJSON() {
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, null);
 
-        ResponseEntity<QuantityMeasurementDTO> response = restTemplate.postForEntity(
-            baseUrl + "/compare", input, QuantityMeasurementDTO.class);
+        ResponseEntity<QuantityMeasurementDTO> response = 
+    		restTemplate.exchange(
+        			baseUrl + "/compare", 
+        			HttpMethod.POST,
+        		    withToken(input, testToken),
+        			QuantityMeasurementDTO.class
+        		);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getHeaders().getContentType().toString()
@@ -555,16 +643,71 @@ public class QuantityMeasurementIntegrationTest {
     public void testIntegrationTest_MultipleOperations_AllPersisted() {
         QuantityInputDTO input = new QuantityInputDTO(feetDTO, inchesDTO, null);
 
-        restTemplate.postForEntity(baseUrl + "/compare", input, QuantityMeasurementDTO.class);
+        restTemplate.exchange(baseUrl + "/compare", HttpMethod.POST, withToken(input, testToken), QuantityMeasurementDTO.class);
 
         QuantityDTO targetInches = new QuantityDTO(0.0, QuantityDTO.LengthUnit.INCHES);
         QuantityInputDTO convertInput = new QuantityInputDTO(feetDTO, targetInches, null);
-        restTemplate.postForEntity(baseUrl + "/convert", convertInput, QuantityMeasurementDTO.class);
+        restTemplate.exchange(baseUrl + "/convert", HttpMethod.POST, withToken(convertInput, testToken), QuantityMeasurementDTO.class);
 
-        restTemplate.postForEntity(baseUrl + "/add", input, QuantityMeasurementDTO.class);
+        restTemplate.exchange(baseUrl + "/add", HttpMethod.POST, withToken(input, testToken), QuantityMeasurementDTO.class);
 
         // Verify all 3 records are in the database
         List<QuantityMeasurementEntity> all = repository.findAll();
         assertEquals(3, all.size());
     }
+    // =========================================================================
+    // UC18 Auth helpers — register a user and obtain a JWT for protected calls
+    // =========================================================================
+
+    private String registerAdminAndGetToken(String email, String password) {
+        User admin = new User();
+        admin.setEmail(email);
+        admin.setPassword(passwordEncoder.encode(password));
+        admin.setProvider(AuthProvider.LOCAL);
+        admin.setRole(Role.ADMIN);
+        
+        userRepository.save(admin);
+
+        AuthRequest loginReq = new AuthRequest(email, password);
+        ResponseEntity<AuthResponse> resp =
+            restTemplate.postForEntity(
+                authUrl + "/login",
+                loginReq,
+                AuthResponse.class
+            );
+
+        return resp.getBody().getAccessToken();
+    }
+    
+    /**
+     * Registers a new user via POST /api/v1/auth/register and returns the JWT.
+     * All quantity endpoint calls must include this token as a Bearer header.
+     */
+    private String registerAndGetToken(String email, String password) {
+        RegisterRequest req = new RegisterRequest(email, password, "Test User");
+        ResponseEntity<AuthResponse> resp = restTemplate.postForEntity(
+            authUrl + "/register", req, AuthResponse.class);
+        assertNotNull(resp.getBody(), "register response body must not be null");
+        return resp.getBody().getAccessToken();
+    }
+
+    /**
+     * Builds an HttpEntity with the Bearer token header and the given body.
+     */
+    private <T> HttpEntity<T> withToken(T body, String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+        return new HttpEntity<>(body, headers);
+    }
+
+    /**
+     * Builds an HttpEntity with only the Bearer token header (no body, for GET requests).
+     */
+    private HttpEntity<Void> withToken(String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        return new HttpEntity<>(headers);
+    }
+
 }
