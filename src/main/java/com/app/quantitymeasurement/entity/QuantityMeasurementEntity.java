@@ -1,4 +1,4 @@
-package com.app.quantitymeasurement.model;
+package com.app.quantitymeasurement.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+
+import com.app.quantitymeasurement.model.QuantityModel;
 
 /**
  * QuantityMeasurementEntity

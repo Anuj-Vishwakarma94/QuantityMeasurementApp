@@ -1,16 +1,17 @@
 package com.app.quantitymeasurement.service;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.List;
 import java.util.function.DoubleBinaryOperator;
-import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.app.quantitymeasurement.exception.QuantityMeasurementException;
-import com.app.quantitymeasurement.model.QuantityDTO;
-import com.app.quantitymeasurement.model.QuantityMeasurementDTO;
-import com.app.quantitymeasurement.model.QuantityMeasurementEntity;
+import com.app.quantitymeasurement.dto.response.QuantityDTO;
+import com.app.quantitymeasurement.dto.request.QuantityMeasurementDTO;
+import com.app.quantitymeasurement.entity.QuantityMeasurementEntity;
 import com.app.quantitymeasurement.model.QuantityModel;
 import com.app.quantitymeasurement.repository.QuantityMeasurementRepository;
 import com.app.quantitymeasurement.unit.IMeasurable;
@@ -32,16 +33,14 @@ import com.app.quantitymeasurement.unit.IMeasurable;
  * are mapped back to {@link QuantityMeasurementDTO} through
  * {@link QuantityMeasurementDTO#fromEntity}.
  *
- * Temperature arithmetic: temperature values cannot be meaningfully added
+ * Temperature arithmetic:temperature values cannot be meaningfully added
  * or subtracted (adding 20°C to 10°C does not produce 30°C in a physical sense), so
  * these operations are explicitly rejected with {@link UnsupportedOperationException}.
  */
+@Slf4j
 @Service
 public class QuantityMeasurementServiceImpl implements IQuantityMeasurementService {
 
-    private static final Logger logger = Logger.getLogger(
-        QuantityMeasurementServiceImpl.class.getName()
-    );
 
     @Autowired
     private QuantityMeasurementRepository repository;
@@ -90,7 +89,7 @@ public class QuantityMeasurementServiceImpl implements IQuantityMeasurementServi
                 String.valueOf(result), null, null, null, false, null);
             repository.save(entity);
 
-            logger.fine("COMPARE: " + q1 + " vs " + q2 + " => " + result);
+            log.debug("COMPARE: " + q1 + " vs " + q2 + " => " + result);
             return QuantityMeasurementDTO.fromEntity(entity);
 
         } catch (QuantityMeasurementException e) {
@@ -123,7 +122,7 @@ public class QuantityMeasurementServiceImpl implements IQuantityMeasurementServi
                 target.getUnit().getUnitName(), target.getUnit().getMeasurementType(), false, null);
             repository.save(entity);
 
-            logger.fine("CONVERT: " + source + " => " + result + " " + target.getUnit().getUnitName());
+            log.debug("CONVERT: " + source + " => " + result + " " + target.getUnit().getUnitName());
             return QuantityMeasurementDTO.fromEntity(entity);
 
         } catch (Exception e) {
@@ -162,7 +161,7 @@ public class QuantityMeasurementServiceImpl implements IQuantityMeasurementServi
                 target.getUnit().getUnitName(), target.getUnit().getMeasurementType(), false, null);
             repository.save(entity);
 
-            logger.fine("ADD: " + q1 + " + " + q2 + " => " + result + " " + target.getUnit().getUnitName());
+            log.debug("ADD: " + q1 + " + " + q2 + " => " + result + " " + target.getUnit().getUnitName());
             return QuantityMeasurementDTO.fromEntity(entity);
 
         } catch (QuantityMeasurementException e) {
@@ -207,7 +206,7 @@ public class QuantityMeasurementServiceImpl implements IQuantityMeasurementServi
                 target.getUnit().getUnitName(), target.getUnit().getMeasurementType(), false, null);
             repository.save(entity);
 
-            logger.fine("SUBTRACT: " + q1 + " - " + q2 + " => " + result);
+            log.debug("SUBTRACT: " + q1 + " - " + q2 + " => " + result);
             return QuantityMeasurementDTO.fromEntity(entity);
 
         } catch (QuantityMeasurementException e) {
@@ -236,7 +235,7 @@ public class QuantityMeasurementServiceImpl implements IQuantityMeasurementServi
                 Operation.DIVIDE.name().toLowerCase(), null, result, null, null, false, null);
             repository.save(entity);
 
-            logger.fine("DIVIDE: " + q1 + " / " + q2 + " => " + result);
+            log.debug("DIVIDE: " + q1 + " / " + q2 + " => " + result);
             return QuantityMeasurementDTO.fromEntity(entity);
 
         } catch (ArithmeticException e) {
@@ -343,6 +342,14 @@ public class QuantityMeasurementServiceImpl implements IQuantityMeasurementServi
 
     /**
      * Validates that the two operands are compatible for an arithmetic operation.
+     *
+     * Checks performed:
+     * 
+     *   Neither operand is {@code null}.
+     *   Both operands belong to the same measurement category.
+     *   The category supports arithmetic (temperature is rejected).
+     *   When {@code targetRequired} is {@code true}, the target unit is not {@code null}.
+     * 
      *
      * @param q1             first operand
      * @param q2             second operand
@@ -466,7 +473,7 @@ public class QuantityMeasurementServiceImpl implements IQuantityMeasurementServi
             repository.save(buildEntity(q1, q2, operation,
                 null, null, null, null, true, errorMessage));
         } catch (Exception ex) {
-            logger.severe("Failed to save error entity: " + ex.getMessage());
+            log.error("Failed to save error entity: " + ex.getMessage());
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.app.quantitymeasurement.model;
 
+import com.app.quantitymeasurement.dto.response.QuantityDTO;
+import com.app.quantitymeasurement.entity.QuantityMeasurementEntity;
 import com.app.quantitymeasurement.unit.IMeasurable;
 
 /**

@@ -1,7 +1,7 @@
 package com.app.quantitymeasurement.service;
 
-import com.app.quantitymeasurement.model.QuantityDTO;
-import com.app.quantitymeasurement.model.QuantityMeasurementDTO;
+import com.app.quantitymeasurement.dto.request.QuantityMeasurementDTO;
+import com.app.quantitymeasurement.dto.response.QuantityDTO;
 
 import java.util.List;
 

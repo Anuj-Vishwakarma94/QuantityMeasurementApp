@@ -1,4 +1,6 @@
-package com.app.quantitymeasurement.model;
+package com.app.quantitymeasurement.dto.request;
+
+import com.app.quantitymeasurement.dto.response.QuantityDTO;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

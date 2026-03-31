@@ -1,5 +1,7 @@
 package com.app.quantitymeasurement.exception;
 
+import lombok.extern.slf4j.Slf4j;
+
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +13,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -20,19 +21,18 @@ import java.util.stream.Collectors;
  * Centralised exception handler for all REST controllers in the application.
  * {@code @ControllerAdvice} intercepts exceptions thrown by any controller and
  * returns consistent, structured JSON error responses instead of raw stack traces.
- *
  */
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger logger = Logger.getLogger(GlobalExceptionHandler.class.getName());
 
     /**
      * Handles Bean Validation failures that arise when a {@code @Valid}-annotated
      * request body fails its constraints.
      *
-     * All field-level error messages are collected and joined into a single
-     * {@code message} string so the client receives full feedback in one response.
+     * <p>All field-level error messages are collected and joined into a single
+     * {@code message} string so the client receives full feedback in one response.</p>
      *
      * @param ex      the validation exception
      * @param request the current HTTP request (used for the {@code path} field)
@@ -47,7 +47,7 @@ public class GlobalExceptionHandler {
             .map(FieldError::getDefaultMessage)
             .collect(Collectors.joining("; "));
 
-        logger.warning("Validation failed: " + errorMessage);
+        log.warn("Validation failed: " + errorMessage);
 
         return ResponseEntity.badRequest().body(buildErrorBody(
             HttpStatus.BAD_REQUEST.value(),
@@ -71,7 +71,7 @@ public class GlobalExceptionHandler {
             QuantityMeasurementException ex,
             HttpServletRequest request) {
 
-        logger.warning("QuantityMeasurementException: " + ex.getMessage());
+        log.warn("QuantityMeasurementException: " + ex.getMessage());
 
         return ResponseEntity.badRequest().body(buildErrorBody(
             HttpStatus.BAD_REQUEST.value(),
@@ -94,7 +94,7 @@ public class GlobalExceptionHandler {
             IllegalArgumentException ex,
             HttpServletRequest request) {
 
-        logger.warning("IllegalArgumentException: " + ex.getMessage());
+        log.warn("IllegalArgumentException: " + ex.getMessage());
 
         return ResponseEntity.badRequest().body(buildErrorBody(
             HttpStatus.BAD_REQUEST.value(),
@@ -118,7 +118,7 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request) {
 
-        logger.severe("Unhandled exception: " + ex.getMessage());
+        log.error("Unhandled exception: " + ex.getMessage());
 
         return ResponseEntity.internalServerError().body(buildErrorBody(
             HttpStatus.INTERNAL_SERVER_ERROR.value(),

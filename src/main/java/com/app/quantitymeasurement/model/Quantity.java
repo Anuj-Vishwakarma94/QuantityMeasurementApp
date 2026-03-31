@@ -1,7 +1,6 @@
 package com.app.quantitymeasurement.model;
 
 import java.util.function.DoubleBinaryOperator;
-
 import com.app.quantitymeasurement.unit.IMeasurable;
 import com.app.quantitymeasurement.unit.SupportsArithmetic;
 

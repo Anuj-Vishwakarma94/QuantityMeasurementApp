@@ -1,4 +1,4 @@
-package com.app.quantitymeasurement.model;
+package com.app.quantitymeasurement.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import com.app.quantitymeasurement.entity.QuantityMeasurementEntity;
 
 /**
  * QuantityMeasurementDTO
